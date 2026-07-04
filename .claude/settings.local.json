@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   }
 }

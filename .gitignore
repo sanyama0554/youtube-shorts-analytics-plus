@@ -1,0 +1,22 @@
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+credentials.json
+client_secret*.json
+*.pem
+*.key
+
+# Claude Code local overrides (personal, not shared)
+.claude/settings.local.json
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+
+# Logs
+*.log
