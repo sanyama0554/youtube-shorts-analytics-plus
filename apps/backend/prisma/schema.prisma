@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Channel {
+  id                String      @id @default(cuid())
+  youtubeChannelId  String      @unique
+  title             String
+  uploadsPlaylistId String
+  oauthToken        OAuthToken?
+  videos            Video[]
+  createdAt         DateTime    @default(now())
+}
+
+// 第2段で使用。第1段では作成されない。
+model OAuthToken {
+  id           String   @id @default(cuid())
+  channelId    String   @unique
+  channel      Channel  @relation(fields: [channelId], references: [id])
+  accessToken  String
+  refreshToken String
+  scope        String
+  expiryDate   DateTime
+  updatedAt    DateTime @updatedAt
+}
+
+model Video {
+  id               String               @id @default(cuid())
+  youtubeVideoId   String               @unique
+  channelId        String
+  channel          Channel              @relation(fields: [channelId], references: [id])
+  title            String
+  publishedAt      DateTime
+  privacyStatus    String
+  tags             String[]             @default([])
+  viewCount        Int
+  likeCount        Int
+  commentCount     Int
+  lastFetchedAt    DateTime             @default(now())
+  retentionPoints  RetentionPoint[]
+  subscriberPoints SubscriberSnapshot[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+}
+
+// 第2段で使用。動画1本につき最大100点（elapsedVideoTimeRatio刻み）。
+model RetentionPoint {
+  id                           String   @id @default(cuid())
+  videoId                      String
+  video                        Video    @relation(fields: [videoId], references: [id])
+  elapsedVideoTimeRatio        Float
+  audienceWatchRatio           Float
+  relativeRetentionPerformance Float
+  fetchedAt                    DateTime @default(now())
+
+  @@unique([videoId, elapsedVideoTimeRatio, fetchedAt])
+}
+
+// 第2段で使用。動画別・日次のsubscribersGained。
+model SubscriberSnapshot {
+  id                String   @id @default(cuid())
+  videoId           String
+  video             Video    @relation(fields: [videoId], references: [id])
+  date              DateTime
+  subscribersGained Int
+
+  @@unique([videoId, date])
+}

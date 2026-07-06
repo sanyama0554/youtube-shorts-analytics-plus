@@ -1,0 +1,16 @@
+{
+  "name": "youtube-shorts-analytics-plus",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter backend build && pnpm --filter frontend build",
+    "typecheck": "pnpm --filter backend typecheck && pnpm --filter frontend typecheck",
+    "lint": "pnpm --filter backend lint && pnpm --filter frontend lint",
+    "test": "pnpm --filter backend test",
+    "prisma:generate": "pnpm --filter backend prisma:generate",
+    "prisma:migrate": "pnpm --filter backend prisma:migrate",
+    "prisma:studio": "pnpm --filter backend prisma:studio"
+  }
+}

@@ -10,9 +10,10 @@ Claude Codeがこのリポジトリで作業する際に必ず従うルール。
 
 ## 現在のリポジトリ状態
 
-- 現時点でコードのスケルトンは未作成（`docs/requirements.md`のみ存在）。
-- ディレクトリ構成（モノレポ or front/back分離）は要件定義書に明記がない。着手前にユーザーに提案し、承認を得てから scaffold する。
-- スケルトンを作成したら、本ファイルの「よく使うコマンド」セクションを実際の`package.json`の`scripts`に合わせて更新する。
+- pnpm workspacesモノレポ。`apps/backend`（NestJS）と`apps/frontend`（Next.js）で構成。
+- 第1段（MVP）の実装済み範囲：`/api/videos`・`/api/videos/summary`・`/api/videos/sync`のバックエンド、ダッシュボード画面（一覧テーブル・集計サマリ・視聴回数の時系列グラフ）のフロントエンド。
+- グラフはRecharts、フロントのデータ取得・キャッシュはSWRを使用。
+- 第2段（OAuth、タグ、維持率、登録者数）は未着手。着手条件は`docs/requirements.md`の第1段DoDを満たしてから。
 
 ## 技術スタック
 
@@ -50,15 +51,16 @@ Claude Codeがこのリポジトリで作業する際に必ず従うルール。
 
 ## よく使うコマンド
 
-> スケルトン未作成のため暫定。実装時にディレクトリ構成と`package.json`の`scripts`を確定し、このセクションを実態に合わせて書き換える。
-
-- 開発サーバー起動（front/back）
-- ビルド
-- 型チェック（`tsc --noEmit`）
-- lint
-- テスト
-- Prisma：`prisma generate` / `prisma migrate dev` / `prisma studio`
-- Docker Compose：ローカルPostgreSQL起動（`docker compose up -d`）
+- ローカルDB起動：`docker compose up -d`
+- 依存インストール（ルートで一括）：`pnpm install`
+- バックエンド開発サーバー：`pnpm dev:backend`（= `apps/backend`で`nest start --watch`、`http://localhost:4000`）
+- フロントエンド開発サーバー：`pnpm dev:frontend`（= `apps/frontend`で`next dev`、`http://localhost:3000`）
+- ビルド：`pnpm build`
+- 型チェック：`pnpm typecheck`
+- lint：`pnpm lint`
+- テスト：`pnpm test`（現状backendのみ、spec未作成のため`passWithNoTests`）
+- Prisma：`pnpm prisma:generate` / `pnpm prisma:migrate`（`migrate dev`） / `pnpm prisma:studio`
+- 個別パッケージに直接コマンドを打つ場合：`pnpm --filter backend <script>` / `pnpm --filter frontend <script>`
 
 ## やってはいけないこと
 
