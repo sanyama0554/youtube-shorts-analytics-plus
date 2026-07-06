@@ -116,15 +116,15 @@
 
 | Method | Path | 説明 |
 |---|---|---|
-| GET | `/oauth/youtube/authorize` | Googleの認可URLへリダイレクト（`https://www.googleapis.com/auth/yt-analytics.readonly` 等のスコープ要求） |
-| GET | `/oauth/youtube/callback` | 認可コードをアクセストークン/リフレッシュトークンに交換し、DBへ保存 |
+| GET | `/oauth/youtube/authorize` | Googleの認可URLへリダイレクト。スコープは`youtube.readonly`（タグ取得用）と`yt-analytics.readonly`（Analytics API用） |
+| GET | `/oauth/youtube/callback` | 認可コードをアクセストークン/リフレッシュトークンに交換。保存前に取得トークンで`channels.list?mine=true`を呼び、返ってきたチャンネルIDが環境変数`YOUTUBE_CHANNEL_ID`と一致するか検証する（不一致なら保存を拒否）。トークンはAES-256-GCMで暗号化してDBへ保存 |
 
 **データ同期・取得API**
 
 | Method | Path | 説明 |
 |---|---|---|
-| POST | `/api/videos/:id/retention/sync` | 対象動画1本の維持率レポート（`elapsedVideoTimeRatio`ディメンション、100点）をAnalytics APIから取得しDB保存 |
-| POST | `/api/sync/batch/retention` | 全動画を対象に維持率を1本ずつ順次同期するバッチジョブを実行（手動トリガー or Cron） |
+| POST | `/api/videos/:id/retention/sync` | 対象動画1本の維持率レポート（`elapsedVideoTimeRatio`ディメンション、100点）をAnalytics APIから取得し、最新値のみDBへupsert |
+| POST | `/api/sync/batch/retention` | 全動画を対象に維持率を1本ずつ順次同期するバッチジョブを実行（手動トリガーのみ） |
 | GET | `/api/videos/:id/retention` | DBから維持率カーブを返す |
 | GET | `/api/retention/compare?videoIds=id1,id2,...` | 複数動画の維持率カーブをまとめて返す |
 | GET | `/api/videos/:id/subscribers-gained` | 動画別の`subscribersGained`時系列をDBから返す |
@@ -180,6 +180,9 @@ model Video {
 }
 
 // 第2段: 動画1本につき最大100点（elapsedVideoTimeRatio刻み）
+// 履歴は残さず、再同期のたびに同一videoId+elapsedVideoTimeRatioの行をupsertで上書きする
+// （設計変更：初版では fetchedAt を含めた複合ユニークで履歴を残す設計だったが、
+//  維持率は公開から数週間でほぼ変動しないため実装単純化を優先し変更）
 model RetentionPoint {
   id                          String  @id @default(cuid())
   videoId                     String
@@ -187,9 +190,9 @@ model RetentionPoint {
   elapsedVideoTimeRatio       Float
   audienceWatchRatio          Float
   relativeRetentionPerformance Float
-  fetchedAt                   DateTime @default(now())
+  fetchedAt                   DateTime @updatedAt
 
-  @@unique([videoId, elapsedVideoTimeRatio, fetchedAt])
+  @@unique([videoId, elapsedVideoTimeRatio])
 }
 
 // 第2段: 動画別・日次のsubscribersGained
@@ -206,7 +209,7 @@ model SubscriberSnapshot {
 
 **設計メモ**
 - `Video`本体には「最新の統計値」を持たせ、第1段の一覧APIはこのテーブルをそのまま返す。過去時点の視聴回数推移が将来必要になった場合は`VideoStatsSnapshot`テーブルを別途追加できる（第1段では不要と判断し省略）。
-- `RetentionPoint`は再同期のたびに`fetchedAt`で新しい行を追加する設計とし、履歴を残す（同一`elapsedVideoTimeRatio`の最新値のみ画面表示に使う）。
+- `RetentionPoint`は履歴を残さず、`videoId`+`elapsedVideoTimeRatio`の一意制約でupsertし常に最新値のみ保持する（`fetchedAt`は最終同期日時として`@updatedAt`で自動更新）。
 - `tags`はPrismaの`String[]`（Postgres配列型）で表現。
 
 ---
@@ -215,21 +218,21 @@ model SubscriberSnapshot {
 
 ### セキュリティ
 - APIキー・OAuth Client Secret・トークンはすべて環境変数管理。フロントエンドのバンドル・レスポンスJSON・エラーメッセージに含めない。
-- OAuthのAccess/Refresh TokenはDBに平文で保存しない（アプリケーション層での暗号化、または暗号化拡張の利用を検討／要確認事項）。
+- OAuthのAccess/Refresh Tokenはアプリケーション層でAES-256-GCM暗号化してからDBに保存する。暗号鍵は環境変数（`TOKEN_ENCRYPTION_KEY`）で管理し、DBやバックアップが漏洩してもトークン単体では復号できない状態にする。
 - CORSはフロントエンドのオリジンのみ許可。
 - 本番環境ではHTTPS必須（OAuthリダイレクトURIの要件でもある）。
 
 ### クォータ管理
 - YouTube Data API既定クォータ：10,000ユニット/日を前提に、`part`パラメータは画面表示に必要な最小限のみ指定する。
 - `videos.list`は動画IDを50件単位でまとめてリクエストし、呼び出し回数を最小化する。
-- DBキャッシュにTTL（例：1時間、要確認事項）を設け、TTL内はYouTube APIを再呼び出ししない。
-- 維持率バッチ（1本ずつしか取得できない）は動画数に比例してユニットを消費するため、全件同期は手動トリガー＋実行間隔の制御（連続リクエスト間にウェイトを入れる等）を行う。
+- DBキャッシュにTTL（`VIDEOS_CACHE_TTL_MINUTES`環境変数、デフォルト60分）を設け、TTL内はYouTube APIを再呼び出ししない。
+- 維持率バッチ（1本ずつしか取得できない）は動画数に比例してユニットを消費するため、実行トリガーは手動ボタン（`POST /api/sync/batch/retention`）のみとし、Cron等の自動実行は行わない。リクエスト間には待機（数百ms〜1秒程度）を入れてレート制御する。
 - APIエラー（403 quotaExceeded等）はキャッチし、画面には「最終取得日時」付きでキャッシュデータを表示するフォールバックを行う。
 
 ### パフォーマンス・キャッシュ
 - 画面表示は常にDB（Postgres）からのレスポンスを優先し、外部API呼び出しは同期処理（`sync`系エンドポイント）でのみ発生させる。
-- フロントエンドはSWR/React Query等でAPIレスポンスをクライアントキャッシュする（ライブラリ選定は要確認事項）。
-- 維持率バッチ処理は同期的にリクエストを待たず、非同期ジョブとして扱う（実装方式は要確認事項）。
+- フロントエンドはSWRでAPIレスポンスをクライアントキャッシュする。
+- 維持率バッチ処理は手動トリガーで実行し、進捗はサーバーログに出力する（専用の進捗確認APIは第2段では設けない）。
 
 ---
 
@@ -266,12 +269,16 @@ model SubscriberSnapshot {
 
 要件確定情報からは判断できず、推測で埋めていない項目。実装着手前に決定が必要。
 
-1. **デプロイ先**：フロントエンド（Vercel想定？）・バックエンド（Railway/Render/Fly.io等？）・本番PostgreSQL（マネージドDB？）の具体的なホスティング先は未確定。
-2. **OAuthトークンの暗号化方式**：DB保存時にアプリケーション層で暗号化するか、DB自体の暗号化に委ねるか、使用ライブラリ（例：Node標準`crypto`）は未確定。
-3. **キャッシュTTLの具体値**：動画一覧・統計情報の「何時間で再取得するか」の具体的な数値は未確定。
-4. **バッチ処理の実行トリガー**：維持率・登録者数のバッチ同期を「手動ボタン」のみとするか、Cron（NestJSの`@nestjs/schedule`等）で定期実行するかは未確定。
-5. **CSV取り込み機能の実装時期**：退路として構造は考慮するとの要件だが、実際にいつ実装するか（第1段/第2段/対応しない）は未確定。
-6. **グラフ描画ライブラリ**：Recharts / Chart.js / visx等、フロントエンドのグラフ実装ライブラリは未指定。
-7. **アプリ自体へのアクセス制御**：YouTube側のOAuthとは別に、ダッシュボードアプリ自体にログイン認証（Basic認証等）を設けるか、単純にURLを非公開にするだけかは未確定。
-8. **フロントエンド／バックエンドのクライアントキャッシュライブラリ**：SWRかReact Queryか、あるいは使用しないかは未確定。
-9. **テストの範囲**：ユニットテスト／E2Eテストをどこまで実装するか（ポートフォリオとしてのアピール度合いにも関わる）は未確定。
+1. **CSV取り込み機能の実装時期**：退路として構造は考慮するとの要件だが、実際にいつ実装するか（第1段/第2段/対応しない）は未確定。
+2. **アプリ自体へのアクセス制御**：YouTube側のOAuthとは別に、ダッシュボードアプリ自体にログイン認証（Basic認証等）を設けるか、単純にURLを非公開にするだけかは未確定。公開URLで運用する場合、`/oauth/youtube/authorize`等のOAuth関連エンドポイントも第三者がアクセスできてしまう点に留意（第三者がなりすまし目的で叩いても、コールバック時に取得チャンネルIDが`YOUTUBE_CHANNEL_ID`と一致するか検証し一致しなければ保存を拒否する設計とするが、根本的なアクセス制御は別途必要）。
+3. **テストの範囲**：ユニットテスト／E2Eテストをどこまで実装するか（ポートフォリオとしてのアピール度合いにも関わる）は未確定。
+
+### 決定済み事項（初版の要確認事項から確定）
+- デプロイ先：フロントエンドはVercel、バックエンド＋PostgreSQLはRailway
+- キャッシュTTL：60分（`VIDEOS_CACHE_TTL_MINUTES`環境変数、デフォルト値）
+- グラフ描画ライブラリ：Recharts
+- クライアントキャッシュライブラリ：SWR
+- ディレクトリ構成：pnpm workspacesモノレポ（`apps/backend` + `apps/frontend`）、パッケージマネージャはpnpm
+- OAuthトークンの暗号化方式：アプリケーション層でAES-256-GCM（第7章参照）
+- 維持率・登録者数バッチの実行トリガー：手動ボタンのみ（Cron等の自動実行は行わない）
+- 維持率データ（RetentionPoint）の保存方式：履歴を残さず最新値のみ上書き保存（第6章参照。初版の設計から変更）
