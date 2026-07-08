@@ -239,10 +239,10 @@ model SubscriberSnapshot {
 ## 8. 段階実装の順序とDefinition of Done
 
 ### 第1段 DoD
-- [ ] `channels.list → playlistItems.list → videos.list`のフローが実装され、全動画（ページング含む）を取得できる
-- [ ] 動画一覧テーブル（全列ソート可能）・集計サマリ・視聴回数の時系列グラフが表示される
-- [ ] フロントエンドからYouTube APIキーが一切参照されない（NestJS経由のみ）ことをコードレビューで確認
-- [ ] 本番環境にデプロイされ、実チャンネルのデータで動作する
+- [x] `channels.list → playlistItems.list → videos.list`のフローが実装され、全動画（ページング含む）を取得できる
+- [x] 動画一覧テーブル（全列ソート可能）・集計サマリ・視聴回数の時系列グラフが表示される
+- [x] フロントエンドからYouTube APIキーが一切参照されない（NestJS経由のみ）ことをコードレビューで確認
+- [x] 本番環境にデプロイされ、実チャンネルのデータで動作する（フロント: Vercel、バックエンド+DB: Railway）
 
 ### 第2段 DoD
 - [ ] OAuth 2.0認可フロー（authorize→callback→トークン保存）が実装され、リフレッシュトークンでの再認証が動作する
