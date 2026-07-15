@@ -49,6 +49,7 @@ model Video {
 }
 
 // 第2段で使用。動画1本につき最大100点（elapsedVideoTimeRatio刻み）。
+// 履歴は残さず、再同期のたびに同一videoId+elapsedVideoTimeRatioの行をupsertで上書きする。
 model RetentionPoint {
   id                           String   @id @default(cuid())
   videoId                      String
@@ -56,9 +57,9 @@ model RetentionPoint {
   elapsedVideoTimeRatio        Float
   audienceWatchRatio           Float
   relativeRetentionPerformance Float
-  fetchedAt                    DateTime @default(now())
+  fetchedAt                    DateTime @updatedAt
 
-  @@unique([videoId, elapsedVideoTimeRatio, fetchedAt])
+  @@unique([videoId, elapsedVideoTimeRatio])
 }
 
 // 第2段で使用。動画別・日次のsubscribersGained。
