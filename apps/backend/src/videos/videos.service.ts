@@ -121,6 +121,7 @@ export class VideosService {
       viewCount: v.viewCount,
       likeCount: v.likeCount,
       commentCount: v.commentCount,
+      subscribersGained: v.subscribersGained,
       lastFetchedAt: v.lastFetchedAt.toISOString(),
     }));
   }

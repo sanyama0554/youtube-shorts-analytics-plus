@@ -103,14 +103,12 @@
 
 **画面: ダッシュボードトップ（拡張）**
 - 一覧テーブルに列追加：タグ / 維持率サマリ（例: 30%到達時点の相対維持率）/ 累計獲得登録者数
+- 累計獲得登録者数は時系列グラフ化はせず、動画単位の合計値を一覧テーブルの列としてのみ表示する（2026-07-15付けで仕様変更、初版では`/subscribers`時系列ビューを予定していたが取りやめ）
 - 既存の視聴回数グラフ・集計サマリは変更しない
 
 **画面: 維持率比較ビュー（`/retention`）**
 - 動画を複数選択（チェックボックス）→ `elapsedVideoTimeRatio`を横軸、`audienceWatchRatio`/`relativeRetentionPerformance`を縦軸に、選択動画分の曲線を重ね書き
 - YouTube Studioでは提供されない「複数動画の維持率を横並び比較する」ことを主目的とする
-
-**画面: 登録者数時系列ビュー（`/subscribers`）**
-- 動画別 or 全体の`subscribersGained`を時系列（日次）で表示
 
 **OAuth認可フロー（NestJS実装）**
 
@@ -127,8 +125,9 @@
 | POST | `/api/sync/batch/retention` | 全動画を対象に維持率を1本ずつ順次同期するバッチジョブを実行（手動トリガーのみ） |
 | GET | `/api/videos/:id/retention` | DBから維持率カーブを返す |
 | GET | `/api/retention/compare?videoIds=id1,id2,...` | 複数動画の維持率カーブをまとめて返す |
-| GET | `/api/videos/:id/subscribers-gained` | 動画別の`subscribersGained`時系列をDBから返す |
-| GET | `/api/videos` | （拡張）タグ・維持率サマリ・登録者増加数を含めて返す |
+| POST | `/api/videos/:id/subscribers/sync` | 対象動画1本の累計獲得登録者数（`subscribersGained`、日次ディメンションなしの単一合計値）をAnalytics APIから取得し、`Video.subscribersGained`を上書き |
+| POST | `/api/sync/batch/subscribers` | 全動画を対象に登録者増加数を1本ずつ順次同期するバッチジョブを実行（手動トリガーのみ、維持率バッチと同様のレート制御） |
+| GET | `/api/videos` | （拡張）タグ・維持率サマリ・累計獲得登録者数を含めて返す |
 
 > 補足：タグ（`snippet.tags`）は所有者OAuth認証済みの`videos.list`呼び出し時のみ取得可能なため、第2段で`videos.list`をOAuthトークン付きに切り替える。
 
@@ -172,9 +171,9 @@ model Video {
   viewCount         Int
   likeCount         Int
   commentCount      Int
+  subscribersGained Int      @default(0)    // 第2段: Analytics APIから取得した動画別の累計獲得登録者数（時系列は持たない）
   lastFetchedAt     DateTime @default(now())
   retentionPoints   RetentionPoint[]
-  subscriberPoints  SubscriberSnapshot[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -194,23 +193,13 @@ model RetentionPoint {
 
   @@unique([videoId, elapsedVideoTimeRatio])
 }
-
-// 第2段: 動画別・日次のsubscribersGained
-model SubscriberSnapshot {
-  id                String   @id @default(cuid())
-  videoId           String
-  video             Video    @relation(fields: [videoId], references: [id])
-  date              DateTime
-  subscribersGained Int
-
-  @@unique([videoId, date])
-}
 ```
 
 **設計メモ**
 - `Video`本体には「最新の統計値」を持たせ、第1段の一覧APIはこのテーブルをそのまま返す。過去時点の視聴回数推移が将来必要になった場合は`VideoStatsSnapshot`テーブルを別途追加できる（第1段では不要と判断し省略）。
 - `RetentionPoint`は履歴を残さず、`videoId`+`elapsedVideoTimeRatio`の一意制約でupsertし常に最新値のみ保持する（`fetchedAt`は最終同期日時として`@updatedAt`で自動更新）。
 - `tags`はPrismaの`String[]`（Postgres配列型）で表現。
+- `subscribersGained`は初版では`SubscriberSnapshot`（動画別・日次）テーブルを予定していたが、時系列表示をやめ動画単位の合計値のみ一覧テーブルに表示する仕様に変更したため（2026-07-15）、`Video`本体のInt列に簡素化した。
 
 ---
 
@@ -248,7 +237,7 @@ model SubscriberSnapshot {
 - [ ] OAuth 2.0認可フロー（authorize→callback→トークン保存）が実装され、リフレッシュトークンでの再認証が動作する
 - [ ] タグが一覧テーブルに表示される
 - [ ] 全動画の維持率データがバッチでDBに蓄積され、`/retention`ビューで複数動画の比較曲線が表示される
-- [ ] `subscribersGained`の時系列が表示される
+- [ ] 動画別の累計獲得登録者数（`subscribersGained`合計値）が一覧テーブルに表示される
 - [ ] 第1段のAPI・テーブル構造を破壊的変更なしに拡張できたことを確認（マイグレーションのみで対応）
 
 ---
@@ -282,3 +271,4 @@ model SubscriberSnapshot {
 - OAuthトークンの暗号化方式：アプリケーション層でAES-256-GCM（第7章参照）
 - 維持率・登録者数バッチの実行トリガー：手動ボタンのみ（Cron等の自動実行は行わない）
 - 維持率データ（RetentionPoint）の保存方式：履歴を残さず最新値のみ上書き保存（第6章参照。初版の設計から変更）
+- 登録者増加数の表示方式：`/subscribers`時系列ビューは廃止し、動画単位の累計獲得登録者数（合計値）をダッシュボードトップの一覧テーブル列として表示する（2026-07-15、初版から変更。第6章・5.2節参照）

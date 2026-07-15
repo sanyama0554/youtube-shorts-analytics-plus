@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { OAuthService } from '../oauth/oauth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { YoutubeAnalyticsApiService } from '../youtube/youtube-analytics-api.service';
 import { RetentionBatchSyncResultDto, RetentionPointResponseDto } from './dto/retention.dto';
-import { YoutubeAnalyticsApiService } from './youtube-analytics-api.service';
 
 // 維持率バッチは動画数に比例してクォータを消費するため、リクエスト間に待機を入れてレート制御する
 const BATCH_REQUEST_DELAY_MS = 500;

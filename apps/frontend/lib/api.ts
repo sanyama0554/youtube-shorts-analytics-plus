@@ -8,6 +8,7 @@ export interface VideoDto {
   viewCount: number;
   likeCount: number;
   commentCount: number;
+  subscribersGained: number;
   lastFetchedAt: string;
 }
 
@@ -44,4 +45,18 @@ export async function syncVideos(): Promise<VideoDto[]> {
     throw new Error(`Sync request failed: ${res.status}`);
   }
   return res.json() as Promise<VideoDto[]>;
+}
+
+export interface SubscribersBatchSyncResultDto {
+  total: number;
+  succeeded: number;
+  failed: string[];
+}
+
+export async function syncSubscribersGained(): Promise<SubscribersBatchSyncResultDto> {
+  const res = await fetch(`${API_BASE_URL}/api/sync/batch/subscribers`, { method: 'POST' });
+  if (!res.ok) {
+    throw new Error(`Subscribers sync request failed: ${res.status}`);
+  }
+  return res.json() as Promise<SubscribersBatchSyncResultDto>;
 }

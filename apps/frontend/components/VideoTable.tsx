@@ -5,7 +5,7 @@ import { VideoDto } from '@/lib/api';
 
 type SortKey = keyof Pick<
   VideoDto,
-  'title' | 'privacyStatus' | 'publishedAt' | 'viewCount' | 'likeCount' | 'commentCount'
+  'title' | 'privacyStatus' | 'publishedAt' | 'viewCount' | 'likeCount' | 'commentCount' | 'subscribersGained'
 >;
 
 const COLUMNS: { key: SortKey; label: string }[] = [
@@ -15,6 +15,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'viewCount', label: '視聴回数' },
   { key: 'likeCount', label: 'いいね数' },
   { key: 'commentCount', label: 'コメント数' },
+  { key: 'subscribersGained', label: '登録者増加数' },
 ];
 const TAGS_COLUMN_LABEL = 'タグ';
 
@@ -74,6 +75,9 @@ export function VideoTable({ videos }: { videos: VideoDto[] }) {
             <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.likeCount.toLocaleString('ja-JP')}</td>
             <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
               {video.commentCount.toLocaleString('ja-JP')}
+            </td>
+            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
+              {video.subscribersGained.toLocaleString('ja-JP')}
             </td>
             <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.tags.join(', ')}</td>
           </tr>

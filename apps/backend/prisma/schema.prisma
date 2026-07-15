@@ -30,22 +30,22 @@ model OAuthToken {
 }
 
 model Video {
-  id               String               @id @default(cuid())
-  youtubeVideoId   String               @unique
-  channelId        String
-  channel          Channel              @relation(fields: [channelId], references: [id])
-  title            String
-  publishedAt      DateTime
-  privacyStatus    String
-  tags             String[]             @default([])
-  viewCount        Int
-  likeCount        Int
-  commentCount     Int
-  lastFetchedAt    DateTime             @default(now())
-  retentionPoints  RetentionPoint[]
-  subscriberPoints SubscriberSnapshot[]
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
+  id                String           @id @default(cuid())
+  youtubeVideoId    String           @unique
+  channelId         String
+  channel           Channel          @relation(fields: [channelId], references: [id])
+  title             String
+  publishedAt       DateTime
+  privacyStatus     String
+  tags              String[]         @default([])
+  viewCount         Int
+  likeCount         Int
+  commentCount      Int
+  subscribersGained Int              @default(0)
+  lastFetchedAt     DateTime         @default(now())
+  retentionPoints   RetentionPoint[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 }
 
 // 第2段で使用。動画1本につき最大100点（elapsedVideoTimeRatio刻み）。
@@ -60,15 +60,4 @@ model RetentionPoint {
   fetchedAt                    DateTime @updatedAt
 
   @@unique([videoId, elapsedVideoTimeRatio])
-}
-
-// 第2段で使用。動画別・日次のsubscribersGained。
-model SubscriberSnapshot {
-  id                String   @id @default(cuid())
-  videoId           String
-  video             Video    @relation(fields: [videoId], references: [id])
-  date              DateTime
-  subscribersGained Int
-
-  @@unique([videoId, date])
 }

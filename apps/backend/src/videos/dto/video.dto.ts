@@ -8,6 +8,7 @@ export interface VideoResponseDto {
   viewCount: number;
   likeCount: number;
   commentCount: number;
+  subscribersGained: number;
   lastFetchedAt: string;
 }
 

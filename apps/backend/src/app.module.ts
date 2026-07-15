@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { VideosModule } from './videos/videos.module';
 import { OAuthModule } from './oauth/oauth.module';
 import { RetentionModule } from './retention/retention.module';
+import { SubscribersModule } from './subscribers/subscribers.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RetentionModule } from './retention/retention.module';
     VideosModule,
     OAuthModule,
     RetentionModule,
+    SubscribersModule,
   ],
 })
 export class AppModule {}

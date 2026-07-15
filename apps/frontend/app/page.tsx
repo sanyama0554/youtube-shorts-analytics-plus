@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import useSWR from 'swr';
-import { fetcher, syncVideos, VideoDto, VideoSummaryDto } from '@/lib/api';
+import { fetcher, syncSubscribersGained, syncVideos, VideoDto, VideoSummaryDto } from '@/lib/api';
 import { SummaryCards } from '@/components/SummaryCards';
 import { VideoTable } from '@/components/VideoTable';
 import { ViewsOverTimeChart } from '@/components/ViewsOverTimeChart';
@@ -21,9 +22,26 @@ export default function DashboardPage() {
     mutate: mutateSummary,
   } = useSWR<VideoSummaryDto>('/api/videos/summary', fetcher);
 
+  const [isSyncingSubscribers, setIsSyncingSubscribers] = useState(false);
+  const [subscribersSyncMessage, setSubscribersSyncMessage] = useState<string | null>(null);
+
   async function handleSync() {
     await syncVideos();
     await Promise.all([mutateVideos(), mutateSummary()]);
+  }
+
+  async function handleSyncSubscribers() {
+    setIsSyncingSubscribers(true);
+    setSubscribersSyncMessage(null);
+    try {
+      const result = await syncSubscribersGained();
+      setSubscribersSyncMessage(`${result.succeeded}/${result.total}件の登録者増加数を更新しました`);
+      await mutateVideos();
+    } catch {
+      setSubscribersSyncMessage('登録者増加数の同期に失敗しました');
+    } finally {
+      setIsSyncingSubscribers(false);
+    }
   }
 
   if (videosError || summaryError) {
@@ -43,8 +61,17 @@ export default function DashboardPage() {
           <button onClick={handleSync} style={{ padding: '8px 16px', cursor: 'pointer' }}>
             最新データに更新
           </button>
+          <button
+            onClick={handleSyncSubscribers}
+            disabled={isSyncingSubscribers}
+            style={{ padding: '8px 16px', cursor: isSyncingSubscribers ? 'default' : 'pointer' }}
+          >
+            {isSyncingSubscribers ? '登録者増加数を同期中...' : '登録者増加数を同期'}
+          </button>
         </div>
       </div>
+
+      {subscribersSyncMessage && <p style={{ marginTop: -12, marginBottom: 16 }}>{subscribersSyncMessage}</p>}
 
       {summaryLoading || !summary ? <p>集計を読み込み中...</p> : <SummaryCards summary={summary} />}
 

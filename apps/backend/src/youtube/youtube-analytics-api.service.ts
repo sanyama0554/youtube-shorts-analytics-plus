@@ -46,6 +46,23 @@ export class YoutubeAnalyticsApiService {
     }));
   }
 
+  // dimensionsを指定しないため、指定期間全体を合計した1行のみが返る
+  async getSubscribersGained(youtubeVideoId: string, startDate: string, accessToken: string): Promise<number> {
+    const endDate = new Date().toISOString().slice(0, 10);
+    const data = await this.request<AnalyticsReportResponse>(
+      {
+        ids: 'channel==MINE',
+        startDate,
+        endDate,
+        metrics: 'subscribersGained',
+        filters: `video==${youtubeVideoId}`,
+      },
+      accessToken,
+    );
+
+    return data.rows?.[0]?.[0] ?? 0;
+  }
+
   // paramsやレスポンスにトークンが含まれるため、axiosの生エラーはそのままログ/例外に出さない
   private async request<T>(params: Record<string, string>, accessToken: string): Promise<T> {
     try {
