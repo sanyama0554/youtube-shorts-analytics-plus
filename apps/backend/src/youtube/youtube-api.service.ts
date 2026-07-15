@@ -15,6 +15,7 @@ export interface YoutubeVideoSummary {
   viewCount: number;
   likeCount: number;
   commentCount: number;
+  tags: string[];
 }
 
 interface YoutubeChannelListResponse {
@@ -29,7 +30,7 @@ interface YoutubePlaylistItemsResponse {
 interface YoutubeVideoListResponse {
   items?: {
     id: string;
-    snippet: { title: string; publishedAt: string };
+    snippet: { title: string; publishedAt: string; tags?: string[] };
     status: { privacyStatus: string };
     statistics: { viewCount?: string; likeCount?: string; commentCount?: string };
   }[];
@@ -48,9 +49,18 @@ export class YoutubeApiService {
 
   // params(APIキー含む)がエラーオブジェクトごとログに出力されるのを防ぐため、
   // axiosの生エラーはここで握りつぶし、整形済みメッセージのみを投げる。
-  private async request<T>(url: string, params: Record<string, unknown>): Promise<T> {
+  private async request<T>(
+    url: string,
+    params: Record<string, unknown>,
+    accessToken?: string,
+  ): Promise<T> {
     try {
-      const { data } = await firstValueFrom(this.httpService.get<T>(url, { params }));
+      const { data } = await firstValueFrom(
+        this.httpService.get<T>(url, {
+          params,
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+        }),
+      );
       return data;
     } catch (error) {
       if (isAxiosError(error)) {
@@ -101,16 +111,21 @@ export class YoutubeApiService {
     return videoIds;
   }
 
-  async getVideoDetails(videoIds: string[]): Promise<YoutubeVideoSummary[]> {
+  // accessToken(所有者OAuth)がある場合のみsnippet.tagsが返る。無い場合はAPIキーのみで取得しtagsは空配列。
+  async getVideoDetails(videoIds: string[], accessToken?: string): Promise<YoutubeVideoSummary[]> {
     const results: YoutubeVideoSummary[] = [];
 
     for (let i = 0; i < videoIds.length; i += PAGE_SIZE) {
       const chunk = videoIds.slice(i, i + PAGE_SIZE);
-      const data = await this.request<YoutubeVideoListResponse>(`${YOUTUBE_API_BASE_URL}/videos`, {
-        part: 'snippet,statistics,status',
-        id: chunk.join(','),
-        key: this.apiKey,
-      });
+      const data = await this.request<YoutubeVideoListResponse>(
+        `${YOUTUBE_API_BASE_URL}/videos`,
+        {
+          part: 'snippet,statistics,status',
+          id: chunk.join(','),
+          ...(accessToken ? {} : { key: this.apiKey }),
+        },
+        accessToken,
+      );
 
       for (const item of data.items ?? []) {
         results.push({
@@ -122,6 +137,7 @@ export class YoutubeApiService {
           viewCount: Number(item.statistics.viewCount ?? 0),
           likeCount: Number(item.statistics.likeCount ?? 0),
           commentCount: Number(item.statistics.commentCount ?? 0),
+          tags: item.snippet.tags ?? [],
         });
       }
     }
@@ -129,9 +145,9 @@ export class YoutubeApiService {
     return results;
   }
 
-  async fetchAllVideos(channelId: string): Promise<YoutubeVideoSummary[]> {
+  async fetchAllVideos(channelId: string, accessToken?: string): Promise<YoutubeVideoSummary[]> {
     const uploadsPlaylistId = await this.getUploadsPlaylistId(channelId);
     const videoIds = await this.listAllVideoIds(uploadsPlaylistId);
-    return this.getVideoDetails(videoIds);
+    return this.getVideoDetails(videoIds, accessToken);
   }
 }

@@ -4,6 +4,7 @@ export interface VideoDto {
   title: string;
   publishedAt: string;
   privacyStatus: string;
+  tags: string[];
   viewCount: number;
   likeCount: number;
   commentCount: number;

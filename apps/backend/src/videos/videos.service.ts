@@ -1,17 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { OAuthService } from '../oauth/oauth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { YoutubeApiService } from '../youtube/youtube-api.service';
 import { VideoResponseDto, VideoSummaryResponseDto } from './dto/video.dto';
 
 @Injectable()
 export class VideosService {
+  private readonly logger = new Logger(VideosService.name);
   private readonly channelId: string;
   private readonly cacheTtlMinutes: number;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly youtubeApi: YoutubeApiService,
+    private readonly oauthService: OAuthService,
     private readonly configService: ConfigService,
   ) {
     this.channelId = this.configService.getOrThrow<string>('YOUTUBE_CHANNEL_ID');
@@ -32,7 +35,8 @@ export class VideosService {
 
   async syncFromYoutube(): Promise<VideoResponseDto[]> {
     const channel = await this.ensureChannel();
-    const fetched = await this.youtubeApi.fetchAllVideos(this.channelId);
+    const accessToken = await this.tryGetAccessToken();
+    const fetched = await this.youtubeApi.fetchAllVideos(this.channelId, accessToken);
 
     await this.prisma.$transaction(
       fetched.map((v) =>
@@ -44,6 +48,7 @@ export class VideosService {
             title: v.title,
             publishedAt: new Date(v.publishedAt),
             privacyStatus: v.privacyStatus,
+            tags: v.tags,
             viewCount: v.viewCount,
             likeCount: v.likeCount,
             commentCount: v.commentCount,
@@ -52,6 +57,7 @@ export class VideosService {
             title: v.title,
             publishedAt: new Date(v.publishedAt),
             privacyStatus: v.privacyStatus,
+            tags: v.tags,
             viewCount: v.viewCount,
             likeCount: v.likeCount,
             commentCount: v.commentCount,
@@ -62,6 +68,18 @@ export class VideosService {
     );
 
     return this.readVideosFromDb();
+  }
+
+  // OAuth未連携・トークン失効時は第1段同様APIキーのみで同期を継続する（tagsは空配列のまま）。
+  private async tryGetAccessToken(): Promise<string | undefined> {
+    try {
+      return await this.oauthService.getValidAccessToken();
+    } catch (error) {
+      this.logger.warn(
+        `OAuth access token unavailable, falling back to API key only (tags will not be fetched): ${(error as Error).message}`,
+      );
+      return undefined;
+    }
   }
 
   private async ensureChannel() {
@@ -99,6 +117,7 @@ export class VideosService {
       title: v.title,
       publishedAt: v.publishedAt.toISOString(),
       privacyStatus: v.privacyStatus,
+      tags: v.tags,
       viewCount: v.viewCount,
       likeCount: v.likeCount,
       commentCount: v.commentCount,

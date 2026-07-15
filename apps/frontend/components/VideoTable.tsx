@@ -16,6 +16,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'likeCount', label: 'いいね数' },
   { key: 'commentCount', label: 'コメント数' },
 ];
+const TAGS_COLUMN_LABEL = 'タグ';
 
 export function VideoTable({ videos }: { videos: VideoDto[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('publishedAt');
@@ -58,6 +59,7 @@ export function VideoTable({ videos }: { videos: VideoDto[] }) {
               {sortKey === col.key ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
             </th>
           ))}
+          <th style={{ textAlign: 'left', borderBottom: '2px solid #ddd', padding: 8 }}>{TAGS_COLUMN_LABEL}</th>
         </tr>
       </thead>
       <tbody>
@@ -73,6 +75,7 @@ export function VideoTable({ videos }: { videos: VideoDto[] }) {
             <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
               {video.commentCount.toLocaleString('ja-JP')}
             </td>
+            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.tags.join(', ')}</td>
           </tr>
         ))}
       </tbody>
