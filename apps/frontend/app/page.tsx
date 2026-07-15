@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, syncVideos, VideoDto, VideoSummaryDto } from '@/lib/api';
 import { SummaryCards } from '@/components/SummaryCards';
@@ -37,9 +38,12 @@ export default function DashboardPage() {
     <main style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1>YouTubeチャンネル分析ダッシュボード</h1>
-        <button onClick={handleSync} style={{ padding: '8px 16px', cursor: 'pointer' }}>
-          最新データに更新
-        </button>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <Link href="/retention">維持率比較</Link>
+          <button onClick={handleSync} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+            最新データに更新
+          </button>
+        </div>
       </div>
 
       {summaryLoading || !summary ? <p>集計を読み込み中...</p> : <SummaryCards summary={summary} />}

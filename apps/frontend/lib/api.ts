@@ -11,6 +11,15 @@ export interface VideoDto {
   lastFetchedAt: string;
 }
 
+export interface RetentionPointDto {
+  elapsedVideoTimeRatio: number;
+  audienceWatchRatio: number;
+  relativeRetentionPerformance: number;
+  fetchedAt: string;
+}
+
+export type RetentionCompareDto = Record<string, RetentionPointDto[]>;
+
 export interface VideoSummaryDto {
   totalVideos: number;
   totalViewCount: number;
