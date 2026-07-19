@@ -47,42 +47,34 @@ export function VideoTable({ videos }: { videos: VideoDto[] }) {
   }
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-      <thead>
-        <tr>
-          {COLUMNS.map((col) => (
-            <th
-              key={col.key}
-              onClick={() => handleSort(col.key)}
-              style={{ cursor: 'pointer', textAlign: 'left', borderBottom: '2px solid #ddd', padding: 8 }}
-            >
-              {col.label}
-              {sortKey === col.key ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-            </th>
-          ))}
-          <th style={{ textAlign: 'left', borderBottom: '2px solid #ddd', padding: 8 }}>{TAGS_COLUMN_LABEL}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map((video) => (
-          <tr key={video.id}>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.title}</td>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.privacyStatus}</td>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
-              {new Date(video.publishedAt).toLocaleString('ja-JP')}
-            </td>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.viewCount.toLocaleString('ja-JP')}</td>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.likeCount.toLocaleString('ja-JP')}</td>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
-              {video.commentCount.toLocaleString('ja-JP')}
-            </td>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>
-              {video.subscribersGained.toLocaleString('ja-JP')}
-            </td>
-            <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{video.tags.join(', ')}</td>
+    <div className="table-wrap">
+      <table className="table">
+        <thead>
+          <tr>
+            {COLUMNS.map((col) => (
+              <th key={col.key} className="sortable" onClick={() => handleSort(col.key)}>
+                {col.label}
+                {sortKey === col.key ? (sortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
+              </th>
+            ))}
+            <th>{TAGS_COLUMN_LABEL}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {sorted.map((video) => (
+            <tr key={video.id}>
+              <td>{video.title}</td>
+              <td>{video.privacyStatus}</td>
+              <td>{new Date(video.publishedAt).toLocaleString('ja-JP')}</td>
+              <td>{video.viewCount.toLocaleString('ja-JP')}</td>
+              <td>{video.likeCount.toLocaleString('ja-JP')}</td>
+              <td>{video.commentCount.toLocaleString('ja-JP')}</td>
+              <td>{video.subscribersGained.toLocaleString('ja-JP')}</td>
+              <td>{video.tags.join(', ')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

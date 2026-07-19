@@ -33,7 +33,9 @@ export default function RetentionPage() {
     <main style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1>維持率比較</h1>
-        <Link href="/">ダッシュボードに戻る</Link>
+        <Link href="/" className="link">
+          ダッシュボードに戻る
+        </Link>
       </div>
 
       <section style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>

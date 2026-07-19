@@ -19,9 +19,9 @@ export function SummaryCards({ summary }: { summary: VideoSummaryDto }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
       {cards.map((card) => (
-        <div key={card.label} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, background: '#fff' }}>
-          <div style={{ fontSize: 12, color: '#666' }}>{card.label}</div>
-          <div style={{ fontSize: 24, fontWeight: 600 }}>{card.value}</div>
+        <div key={card.label} className="card">
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', letterSpacing: '0.01em' }}>{card.label}</div>
+          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em', marginTop: 4 }}>{card.value}</div>
         </div>
       ))}
     </div>

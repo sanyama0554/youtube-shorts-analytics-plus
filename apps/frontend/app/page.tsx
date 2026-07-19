@@ -57,21 +57,25 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1>YouTubeチャンネル分析ダッシュボード</h1>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <Link href="/retention">維持率比較</Link>
-          <button onClick={handleSync} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+          <Link href="/retention" className="link">
+            維持率比較
+          </Link>
+          <button onClick={handleSync} className="btn">
             最新データに更新
           </button>
-          <button
-            onClick={handleSyncSubscribers}
-            disabled={isSyncingSubscribers}
-            style={{ padding: '8px 16px', cursor: isSyncingSubscribers ? 'default' : 'pointer' }}
-          >
+          <button onClick={handleSyncSubscribers} disabled={isSyncingSubscribers} className="btn">
             {isSyncingSubscribers ? '登録者増加数を同期中...' : '登録者増加数を同期'}
           </button>
         </div>
       </div>
 
-      {subscribersSyncMessage && <p style={{ marginTop: -12, marginBottom: 16 }}>{subscribersSyncMessage}</p>}
+      {subscribersSyncMessage && (
+        <p
+          className={`status-message ${subscribersSyncMessage.includes('失敗') ? 'status-message--error' : 'status-message--success'}`}
+        >
+          {subscribersSyncMessage}
+        </p>
+      )}
 
       {summaryLoading || !summary ? <p>集計を読み込み中...</p> : <SummaryCards summary={summary} />}
 

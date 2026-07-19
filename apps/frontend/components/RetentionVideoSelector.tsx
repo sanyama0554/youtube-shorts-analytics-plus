@@ -20,10 +20,10 @@ export function RetentionVideoSelector({
   }
 
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: 320, overflowY: 'auto' }}>
+    <ul className="selector-list">
       {videos.map((video) => (
-        <li key={video.id} style={{ borderBottom: '1px solid #eee' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', cursor: 'pointer' }}>
+        <li key={video.id}>
+          <label className="selector-row">
             <input
               type="checkbox"
               checked={selectedVideoIds.includes(video.id)}
