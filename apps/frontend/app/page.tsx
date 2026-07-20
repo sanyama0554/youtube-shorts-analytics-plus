@@ -77,7 +77,19 @@ export default function DashboardPage() {
         </p>
       )}
 
-      {summaryLoading || !summary ? <p>集計を読み込み中...</p> : <SummaryCards summary={summary} />}
+      {summaryLoading || !summary ? (
+        <p>集計を読み込み中...</p>
+      ) : (
+        <>
+          <SummaryCards summary={summary} />
+          {summary.lastFetchedAt && (
+            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8 }}>
+              最終取得日時: {new Date(summary.lastFetchedAt).toLocaleString('ja-JP')}
+              {'（YouTube APIの取得に失敗した場合、この時点のキャッシュを表示しています）'}
+            </p>
+          )}
+        </>
+      )}
 
       <section style={{ marginTop: 32 }}>
         <h2>視聴回数の推移</h2>

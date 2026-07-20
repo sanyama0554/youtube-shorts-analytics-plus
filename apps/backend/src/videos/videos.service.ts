@@ -23,7 +23,13 @@ export class VideosService {
 
   async getVideos(): Promise<VideoResponseDto[]> {
     if (await this.isCacheStale()) {
-      await this.syncFromYoutube();
+      // クォータ超過等でYouTube APIが失敗しても、DBキャッシュ（lastFetchedAt付き）を
+      // 返すフォールバックとする（要件定義書7章）。
+      try {
+        await this.syncFromYoutube();
+      } catch (error) {
+        this.logger.warn(`YouTube sync failed, falling back to cached data: ${(error as Error).message}`);
+      }
     }
     return this.readVideosFromDb();
   }

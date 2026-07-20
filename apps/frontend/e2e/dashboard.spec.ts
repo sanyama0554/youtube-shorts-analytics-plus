@@ -42,6 +42,7 @@ test.describe('ダッシュボード', () => {
     await expect(page.getByText('動画タイトル')).toBeVisible();
     await expect(page.getByText('総動画数')).toBeVisible();
     await expect(page.getByRole('cell', { name: '3', exact: true })).toBeVisible();
+    await expect(page.getByText('最終取得日時')).toBeVisible();
   });
 
   test('列見出しクリックで一覧テーブルの並び替えができる', async ({ page }) => {

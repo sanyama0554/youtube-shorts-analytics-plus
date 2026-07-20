@@ -107,4 +107,21 @@ describe('Videos (integration)', () => {
       lastFetchedAt: null,
     });
   });
+
+  it('GET /api/videos falls back to cached data (200, not 500) when the YouTube API errors', async () => {
+    // 事前に正常同期して古いキャッシュを作っておく
+    mockYoutubeDataApi();
+    await request(app.getHttpServer()).post('/api/videos/sync').expect(201);
+    await prisma.video.updateMany({ data: { lastFetchedAt: new Date(Date.now() - 61 * 60 * 1000) } });
+
+    // 次回アクセス時、YouTube側がクォータ超過等でエラーを返す状況を再現する
+    nock.cleanAll();
+    nock('https://www.googleapis.com').get('/youtube/v3/channels').query(true).reply(403, { error: 'quotaExceeded' });
+
+    const res = await request(app.getHttpServer()).get('/api/videos').expect(200);
+
+    expect(res.body).toHaveLength(2);
+    const titles = res.body.map((v: { title: string }) => v.title).sort();
+    expect(titles).toEqual(['動画1', '動画2']);
+  });
 });

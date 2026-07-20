@@ -53,6 +53,12 @@ describe('DashboardPage', () => {
     expect(screen.getByText('総動画数')).toBeInTheDocument();
   });
 
+  it('shows the last-fetched-at timestamp alongside the summary (cache freshness indicator)', async () => {
+    renderWithFreshSWR(<DashboardPage />);
+
+    expect(await screen.findByText(/最終取得日時/)).toBeInTheDocument();
+  });
+
   it('shows an error message when the initial fetch fails', async () => {
     fetchMock.mockImplementation(() => Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) } as Response));
     renderWithFreshSWR(<DashboardPage />);

@@ -99,6 +99,22 @@ describe('VideosService', () => {
 
       expect(youtubeApi.fetchAllVideos).toHaveBeenCalledTimes(1);
     });
+
+    it('falls back to cached DB data instead of throwing when the YouTube sync fails', async () => {
+      const staleDate = new Date(Date.now() - 61 * 60 * 1000);
+      const findFirst = jest.fn().mockResolvedValue({ lastFetchedAt: staleDate });
+      const findMany = jest.fn().mockResolvedValue([dbVideo()]);
+      const findUniqueChannel = jest.fn().mockResolvedValue({ id: 'channel-1' });
+      const fetchAllVideos = jest.fn().mockRejectedValue(new Error('YouTube API request failed: 403 quotaExceeded'));
+      const { service } = buildService({
+        prisma: { video: { findFirst, findMany }, channel: { findUnique: findUniqueChannel } },
+        youtubeApi: { fetchAllVideos },
+      });
+
+      const result = await service.getVideos();
+
+      expect(result).toHaveLength(1);
+    });
   });
 
   describe('getSummary', () => {
