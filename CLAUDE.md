@@ -58,7 +58,9 @@ Claude Codeがこのリポジトリで作業する際に必ず従うルール。
 - ビルド：`pnpm build`
 - 型チェック：`pnpm typecheck`
 - lint：`pnpm lint`
-- テスト：`pnpm test`（現状backendのみ、spec未作成のため`passWithNoTests`）
+- 単体テスト：`pnpm test`（backend: Jest、frontend: Jest + React Testing Library）
+- 結合テスト（backend、実DB）：`pnpm test:integration`（`docker compose up -d`でPostgresが起動している前提。初回のみ`youtube_shorts_analytics_test`データベースの作成が必要）
+- E2Eテスト（frontend、Playwright。バックエンドAPIはroute傍受でモック）：`pnpm test:e2e`
 - Prisma：`pnpm prisma:generate` / `pnpm prisma:migrate`（`migrate dev`） / `pnpm prisma:studio`
 - 個別パッケージに直接コマンドを打つ場合：`pnpm --filter backend <script>` / `pnpm --filter frontend <script>`
 

@@ -21,3 +21,9 @@ build/
 
 # Logs
 *.log
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+blob-report/

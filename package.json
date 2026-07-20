@@ -8,7 +8,9 @@
     "build": "pnpm --filter backend build && pnpm --filter frontend build",
     "typecheck": "pnpm --filter backend typecheck && pnpm --filter frontend typecheck",
     "lint": "pnpm --filter backend lint && pnpm --filter frontend lint",
-    "test": "pnpm --filter backend test",
+    "test": "pnpm --filter backend test && pnpm --filter frontend test",
+    "test:integration": "pnpm --filter backend test:integration",
+    "test:e2e": "pnpm --filter frontend test:e2e",
     "prisma:generate": "pnpm --filter backend prisma:generate",
     "prisma:migrate": "pnpm --filter backend prisma:migrate",
     "prisma:studio": "pnpm --filter backend prisma:studio"
